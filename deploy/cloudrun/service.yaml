@@ -1,0 +1,36 @@
+# Cloud Run service spec for the always-on public deployment.
+# Deployed via deploy/cloudrun/deploy.sh (which substitutes PROJECT/REGION).
+#
+# Why Cloud Run for the public link:
+#  - scales to zero => free when idle, cheap when used
+#  - gives a public HTTPS URL a customer/recruiter can click
+#  - runs the same container image as everything else
+#
+# The public version uses the heuristic classifier (no Ollama — too heavy to run
+# free always-on), which is exactly why that fallback was built in from day one.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: waybill
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"    # scale to zero => free idle
+        autoscaling.knative.dev/maxScale: "4"
+    spec:
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT/waybill/waybill:latest
+          ports:
+            - containerPort: 8000
+          args: ["serve", "--host", "0.0.0.0", "--port", "8000"]
+          env:
+            - name: ESCALATION_THRESHOLD
+              value: "0.75"
+            # DATABASE_URL is injected from a Secret at deploy time (see script).
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi

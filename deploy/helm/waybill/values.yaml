@@ -1,0 +1,63 @@
+# Default values, tuned for local kind. Override per-environment with
+# -f values-<env>.yaml. Nothing here assumes AWS — the same chart runs on kind
+# and (with an override) on EKS.
+
+image:
+  repository: waybill
+  tag: latest
+  pullPolicy: IfNotPresent   # kind loads the image locally; no registry pull
+
+replicaCount: 2
+
+service:
+  type: ClusterIP
+  port: 8000
+
+# App configuration surfaced as env vars / ConfigMap.
+config:
+  escalationThreshold: "0.75"
+  ollamaHost: "http://ollama:11434"
+  ollamaModel: "llama3.1:8b"
+  # Tracing: enable and point at Tempo's OTLP HTTP endpoint in the monitoring ns.
+  otelEnabled: "false"
+  otelEndpoint: "http://tempo.monitoring:4318"
+
+# Bundled Postgres for local/dev. In a real cluster you'd point at RDS instead
+# by setting postgres.enabled=false and database.url to the managed endpoint.
+postgres:
+  enabled: true
+  image: postgres:16
+  user: waybill
+  password: waybill        # dev only — real secrets come from a Secret/SealedSecret
+  database: waybill
+  storage: 1Gi
+
+database:
+  # When postgres.enabled=true this is templated to the in-cluster service.
+  url: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+# Run the Alembic migration as a pre-install/pre-upgrade Job so the schema is
+# always current before new pods start.
+migrations:
+  enabled: true
+
+# Scheduled drift-check-and-retrain CronJob. Disabled by default (needs MLflow
+# reachable); enable to close the self-improving loop.
+retrain:
+  enabled: false
+  schedule: "0 3 * * *"           # daily at 03:00
+  mlflowUri: "http://mlflow.monitoring:5000"

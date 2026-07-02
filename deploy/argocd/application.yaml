@@ -1,0 +1,33 @@
+# Argo CD Application — the GitOps track for the Kubernetes deployment.
+#
+# The model: Argo CD watches this Git repo and continuously syncs the cluster to
+# match the Helm chart in deploy/helm/waybill. You never kubectl apply by hand;
+# you commit, and Argo reconciles. This is how the EKS/kind deployment stays
+# declarative and auditable — the repo is the single source of truth.
+#
+# To use (once Argo CD is installed in the cluster):
+#   kubectl apply -f deploy/argocd/application.yaml
+# Then Argo shows the app, its sync status, and self-heals drift.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: waybill
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_ORG/waybill.git
+    targetRevision: main
+    path: deploy/helm/waybill
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: waybill
+  syncPolicy:
+    automated:
+      prune: true       # delete resources removed from Git
+      selfHeal: true    # revert manual drift back to the Git state
+    syncOptions:
+      - CreateNamespace=true

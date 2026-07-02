@@ -1,0 +1,12 @@
+# kind cluster for local Waybill development. One control-plane + one worker so
+# you can see scheduling across nodes. extraPortMappings exposes the ingress /
+# nodeport on localhost so you can curl the service from your Mac.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 8080
+        protocol: TCP
+  - role: worker

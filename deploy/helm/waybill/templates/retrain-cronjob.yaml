@@ -1,0 +1,36 @@
+{{- if .Values.retrain.enabled }}
+# Scheduled drift-check-and-retrain. This is what makes retraining *automated*:
+# on a schedule, a Job runs `waybill retrain`, which checks the journal for
+# drift and only retrains + promotes (through the eval gate) if drift is found.
+# The loop is hands-off but never ships a model that fails the gate.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: waybill-retrain
+  labels:
+    {{- include "waybill.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.retrain.schedule | quote }}
+  concurrencyPolicy: Forbid          # never run two retrains at once
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: retrain
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args: ["retrain"]
+              envFrom:
+                - configMapRef:
+                    name: waybill-config
+                - secretRef:
+                    name: waybill-secrets
+              env:
+                - name: MLFLOW_TRACKING_URI
+                  value: {{ .Values.retrain.mlflowUri | quote }}
+{{- end }}

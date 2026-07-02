@@ -1,0 +1,16 @@
+# kind override: expose the Waybill service via NodePort 30080, which the kind
+# config maps to localhost:8080. Apply with:
+#   helm upgrade --install waybill deploy/helm/waybill -f deploy/kind/values-kind.yaml
+service:
+  type: NodePort
+
+# Local Postgres is fine; Ollama isn't run in-cluster here (too heavy), so the
+# app falls back to the heuristic classifier automatically. Point ollamaHost at
+# your host machine's Ollama if you want real LLM locally.
+config:
+  ollamaHost: "http://host.docker.internal:11434"
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 4

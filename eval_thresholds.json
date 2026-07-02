@@ -1,0 +1,5 @@
+{
+  "classification_accuracy": 0.70,
+  "escalation_recall": 0.90,
+  "false_auto_resolve_rate": 0.10
+}

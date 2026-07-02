@@ -1,0 +1,4 @@
+# Optional: model training + registry. Install when training/serving the
+# trained classifier:  pip install -r requirements.txt -r requirements-ml.txt
+scikit-learn>=1.4
+mlflow>=2.14

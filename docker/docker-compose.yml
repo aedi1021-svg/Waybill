@@ -1,0 +1,52 @@
+# Phase 1 local stack: Postgres (audit journal) + Ollama (reasoning) + Waybill app.
+#
+# First run:
+#   docker compose up -d postgres ollama
+#   docker compose run --rm waybill migrate          # apply Alembic migrations
+#   docker compose exec ollama ollama pull llama3.1:8b
+#   docker compose run --rm waybill seed -n 50       # persist a batch to the DB
+#   docker compose run --rm waybill demo
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: waybill
+      POSTGRES_PASSWORD: waybill
+      POSTGRES_DB: waybill
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U waybill"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+
+  waybill:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql+psycopg://waybill:waybill@postgres:5432/waybill
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: llama3.1:8b
+      ESCALATION_THRESHOLD: "0.75"
+
+volumes:
+  pg_data:
+  ollama_models:

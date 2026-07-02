@@ -1,0 +1,101 @@
+{
+  "title": "Waybill — Freight Exception Agent",
+  "uid": "waybill-main",
+  "schemaVersion": 39,
+  "editable": true,
+  "time": { "from": "now-30m", "to": "now" },
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Decisions per second by disposition",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (disposition) (rate(waybill_decisions_total[1m]))",
+          "legendFormat": "{{disposition}}"
+        }
+      ],
+      "description": "Auto-resolve vs escalate rate — the core product signal. A rising escalation share means the classifier is getting less confident."
+    },
+    {
+      "id": 2,
+      "title": "Auto-resolve rate",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(waybill_decisions_total{disposition=\"auto_resolved\"}[5m])) / clamp_min(sum(rate(waybill_decisions_total[5m])), 0.0001)"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } }
+    },
+    {
+      "id": 3,
+      "title": "Escalation rate",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(waybill_decisions_total{disposition=\"escalated\"}[5m])) / clamp_min(sum(rate(waybill_decisions_total[5m])), 0.0001)"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } }
+    },
+    {
+      "id": 4,
+      "title": "Decisions by exception type",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum by (exception_type) (rate(waybill_decisions_total[1m]))",
+          "legendFormat": "{{exception_type}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Classifier confidence (p50 / p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(waybill_decision_confidence_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(waybill_decision_confidence_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ],
+      "description": "Confidence distribution over time. A downward drift here is the earliest signal of model drift."
+    },
+    {
+      "id": 6,
+      "title": "HTTP request rate by path",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum by (path) (rate(waybill_http_requests_total[1m]))",
+          "legendFormat": "{{path}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Decision latency p95",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(waybill_decision_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95 decision latency"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    }
+  ]
+}
