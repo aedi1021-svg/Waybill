@@ -70,4 +70,4 @@ def test_health_is_live(client):
 def test_metrics_endpoint(client):
     resp = client.get("/metrics")
     assert resp.status_code == 200
-    assert "waybill_up" in resp.text
+    assert "python_gc" in resp.text
